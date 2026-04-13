@@ -1,0 +1,52 @@
+name: FMU PDF Crawler
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 0"   # every Sunday
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repo
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3. Cache pip (faster builds)
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}
+
+      # 4. Install dependencies
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 5. Run crawler
+      - name: Run crawler
+        run: python crawler.py
+
+      # 6. Upload dataset (important for ML use)
+      - name: Upload dataset
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataset
+          path: dataset.jsonl
+
+      # 7. (Optional) Save to repo
+      - name: Commit dataset
+        run: |
+          git config --global user.name "bot"
+          git config --global user.email "bot@github.com"
+          git add dataset.jsonl || true
+          git commit -m "update dataset" || echo "no changes"
+          git push
